@@ -1,0 +1,24 @@
+diff --git a/node_modules/@shopify/hydrogen/dist/esnext/index.d.ts b/node_modules/@shopify/hydrogen/dist/esnext/index.d.ts
+index 03e0683..dc1da3d 100644
+--- a/node_modules/@shopify/hydrogen/dist/esnext/index.d.ts
++++ b/node_modules/@shopify/hydrogen/dist/esnext/index.d.ts
+@@ -18,6 +18,7 @@ export { Route } from './foundation/Route/Route.server';
+ export { Router } from './foundation/Router/Router.server';
+ export { log, type Logger } from './utilities/log';
+ export { LocalizationProvider } from './components/LocalizationProvider/LocalizationProvider.server';
++export { ShopifyContext } from './foundation/ShopifyProvider';
+ export { ShopifyProvider } from './foundation/ShopifyProvider/ShopifyProvider.server';
+ export { generateCacheControlHeader, CacheNone, CacheShort, CacheLong, CacheCustom, } from './foundation/Cache/strategies';
+ export { useRequestContext } from './foundation/useRequestContext';
+diff --git a/node_modules/@shopify/hydrogen/dist/esnext/index.js b/node_modules/@shopify/hydrogen/dist/esnext/index.js
+index eac83b8..6e4cdbf 100644
+--- a/node_modules/@shopify/hydrogen/dist/esnext/index.js
++++ b/node_modules/@shopify/hydrogen/dist/esnext/index.js
+@@ -18,6 +18,7 @@ export { Route } from './foundation/Route/Route.server';
+ export { Router } from './foundation/Router/Router.server';
+ export { log } from './utilities/log';
+ export { LocalizationProvider } from './components/LocalizationProvider/LocalizationProvider.server';
++export { ShopifyContext } from './foundation/ShopifyProvider';
+ export { ShopifyProvider } from './foundation/ShopifyProvider/ShopifyProvider.server';
+ export { generateCacheControlHeader, CacheNone, CacheShort, CacheLong, CacheCustom, } from './foundation/Cache/strategies';
+ export { useRequestContext } from './foundation/useRequestContext';

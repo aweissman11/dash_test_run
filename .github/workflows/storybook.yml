@@ -1,0 +1,42 @@
+name: 📙 Storybook
+on:
+  workflow_run:
+    workflows:
+      - 🦞 Main
+    types:
+      - completed
+    branches:
+      - main
+      - staging
+      - production
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⤵️ Checkout repository
+        uses: actions/checkout@v3
+
+      - name: 📥 Download dependencies
+        uses: bahmutov/npm-install@v1
+
+      - name: 📖 Build CSS & Storybook
+        run: |
+          npm run build:css
+          npm run storybook:build
+
+      - name: 🦔 Upload to Percy if enabled
+        env:
+          PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
+        if: env.PERCY_TOKEN != null
+        run: |
+          npx @percy/cli snapshot storybook-static
+
+      - name: 🛳 Deploy to Github Pages
+        uses: JamesIves/github-pages-deploy-action@3.6.2
+        with:
+          branch: gh-pages
+          folder: storybook-static

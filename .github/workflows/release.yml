@@ -1,0 +1,94 @@
+name: ⛴  Release & Deploy 💨
+on:
+  workflow_run:
+    workflows:
+      - 🦞 Main
+    types:
+      - completed
+    branches:
+      - main
+      - staging
+      - production
+
+jobs:
+  deploy:
+    name: 🛳 Ship it 💨
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-east-1
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: 🕵 Inspect Environment
+        id: inspect-env
+        run: |
+          STAGE=$(echo ${{ github.ref }} | sed 's|refs/heads/||g')
+          PROJECT_NAME=$(jq -r .name package.json)
+          echo ::set-output name=stage::$STAGE
+          echo ::set-output name=project-name::$PROJECT_NAME
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: 📥 Download dependencies
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: cdk
+
+      - name: 🚚 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
+      - name: 🚜 Contentful migrations
+        working-directory: contentful
+        env:
+          CI: true
+          CONTENTFUL_SPACE_ID: ${{ secrets.CONTENTFUL_SPACE_ID }}
+          CONTENTFUL_MANAGEMENT_ACCESS_TOKEN: ${{ secrets.CONTENTFUL_MANAGEMENT_ACCESS_TOKEN }}
+        run: |
+          STAGE=${{ steps.inspect-env.outputs.stage }}
+          npm install
+          if [[ -z "${CONTENTFUL_SPACE_ID-}" ]]; then
+            echo "Skipping migrations, as this project does not have a CONTENTFUL_SPACE_ID set"
+            exit 0
+          elif [[ $CONTENTFUL_SPACE_ID = "jcdjo56lmw8q" ]]; then
+            echo "Skipping migrations, as this project does not have permission to migrate the demo contentful space."
+            exit 0
+          fi
+
+          if [[ $STAGE == 'production' ]]; then
+            export CONTENTFUL_ENV_ID=master
+          elif curl \
+              --header "Authorization: Bearer $CONTENTFUL_MANAGEMENT_ACCESS_TOKEN" \
+              https://api.contentful.com/spaces/$CONTENTFUL_SPACE_ID/environments \
+              | jq -r  '.items | .[] | .sys.id' | grep $STAGE; then
+            # if there is a contentful environment named for the current stage, migrate that.
+            export CONTENTFUL_ENV_ID=$STAGE
+          else
+            echo "Unable to find a contentful environment whose name matches this deploy stage (STAGE=$STAGE)"
+            exit 1
+          fi
+          npm run migrate
+      - name: 🏗 Build Strapi
+        # Strapi gets built outside of Docker because it needs a STRAPI_URL environment variable at build time
+        # the completed build files are then copied into the container
+        working-directory: strapi
+        env:
+          STRAPI_URL: ${{ secrets.STRAPI_URL }}
+        run: |
+          npm install
+          npm run build
+
+      - name: 🚢 Deploy everything 💨
+        working-directory: cdk
+        run: npx cdk deploy DeptDash-${{ steps.inspect-env.outputs.project-name }}-${{ steps.inspect-env.outputs.stage }} --require-approval never

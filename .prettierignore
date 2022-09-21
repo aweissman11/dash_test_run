@@ -1,0 +1,13 @@
+node_modules
+CODEOWNERS
+
+/build
+/public/build
+.env
+
+/postgres-data
+
+tailwind.css
+/contentful/migrations
+/strapi/.cache
+/strapi/build

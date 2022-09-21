@@ -1,0 +1,20 @@
+# Configuration variables that are secret or are different on each environment are stored here
+# all other configuration variables are stored in app/config.ts
+export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/test_run"
+export SESSION_SECRET="ec35b8715391306323b4822f8b8af6cd"
+# Do not include a trailing slash
+export PUBLICLY_AVAILABLE_ORIGIN="http://localhost:3000"
+export CONTENTFUL_SPACE_ID=jcdjo56lmw8q
+export CONTENTFUL_PREVIEW_ACCESS_TOKEN=6Sovo60Z0rGOYvNmnr_pKBp5pXCKkJqRkUHODg4YXyA
+export CONTENTFUL_MANAGEMENT_ACCESS_TOKEN=
+export CONTENTFUL_ENV_ID=master
+export ALGOLIA_APP_ID=RHVCHJW67L
+export ALGOLIA_INDEX=demo_content
+export ALGOLIA_STORE_INDEX=shopify_products_recently_ordered_count_desc
+export ALGOLIA_SEARCH_KEY=5e56001b6c4b76edb3d2b69ca5951b75
+export ALGOLIA_ADMIN_KEY=
+export SENTRY_DSN=
+export GA_TRACKING_ID=
+export STRAPI_URL=http://localhost:1337
+export STRAPI_API_TOKEN=de7cc87cb84769c9f2f540b14a351952f0658c5f2a9978cddc9f8252098795fde82685649b13d72cf32197e8965062318b29a8fd06c2ffe9033faab9037bccba0d63aea7273f14bca07376e13dadd7e0757b66c365b2fa138a62d839a53be09da12dcccff09c21ec51025c916832e664b4ea0fe4cd34469f0f6bfd6ee93c9bb3
+export PERCY_TOKEN=

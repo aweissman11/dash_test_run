@@ -1,0 +1,142 @@
+name: 🦞 Main
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  lint:
+    name: ⬣ ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: 📥 Download dependencies
+        uses: bahmutov/npm-install@v1
+
+      - name: 🔬 Lint
+        run: npm run lint
+
+  typecheck:
+    name: ʦ TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: 📥 Download dependencies
+        uses: bahmutov/npm-install@v1
+
+      - name: 🔎 Run a type check
+        run: npm run typecheck --if-present
+
+  vitest:
+    name: ⚡ Vitest
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: 📥 Download dependencies
+        uses: bahmutov/npm-install@v1
+
+      - name: ⚡ Run vitest
+        run: npm run test -- --coverage
+
+  test:
+    name: 🎭 Playwright
+    runs-on: ubuntu-latest
+    env:
+      PUBLICLY_AVAILABLE_ORIGIN: http://localhost:3000
+      SESSION_SECRET: secret
+      # Contentful
+      CONTENTFUL_ENV_ID: "master"
+      CONTENTFUL_SPACE_ID: "${{ secrets.CONTENTFUL_SPACE_ID }}"
+      CONTENTFUL_ACCESS_TOKEN: "${{ secrets.CONTENTFUL_ACCESS_TOKEN }}"
+      CONTENTFUL_PREVIEW_ACCESS_TOKEN: "${{ secrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN }}"
+      CONTENTFUL_MANAGEMENT_ACCESS_TOKEN: "${{ secrets.CONTENTFUL_MANAGEMENT_ACCESS_TOKEN }}"
+      # Strapi
+      STRAPI_URL: http://localhost:1337
+      STRAPI_API_TOKEN: "${{ secrets.STRAPI_API_TOKEN }}"
+    steps:
+      - name: 🛑 Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: 📥 Download dependencies
+        run: |
+          npm install
+      - name: 🕵 Inspect Environment
+        id: inspect-env
+        run: |
+          # get the potential environment name, either as the entire branch name, or as "<env_name>/other-part-of-branch-name"
+          POTENTIAL_ENV_NAME=$(echo ${{ github.head_ref }} | sed 's|/.*||g')
+          if curl \
+              --header "Authorization: Bearer $CONTENTFUL_MANAGEMENT_ACCESS_TOKEN" \
+              https://api.contentful.com/spaces/$CONTENTFUL_SPACE_ID/environments \
+              | jq -r  '.items | .[] | .sys.id' | grep -x $POTENTIAL_ENV_NAME; then
+            # if Contentful has an environment that exactly matches our potential environment name, then use that
+            CONTENTFUL_ENV_ID=$POTENTIAL_ENV_NAME
+          else
+            # otherwise, just use the master environment (presumably this branch isn't using Contentful migrations)
+            CONTENTFUL_ENV_ID=master
+          fi
+          echo "Selected Contentful environment: $CONTENTFUL_ENV_ID (POTENTIAL_ENV_NAME=$POTENTIAL_ENV_NAME)"
+          echo ::set-output name=contentful-env::$CONTENTFUL_ENV_ID
+      - name: 📥 Download Strapi dependencies
+        run: |
+          npm install --prefix ./strapi
+      - name: 🐳 Docker compose
+        # the sleep is just there to give time for postgres to get started
+        run: docker-compose up -d && sleep 3
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres"
+      - name: 🛠 Setup database
+        run: npx prisma migrate reset --force
+
+      - name: ⚙️ Build
+        run: npm run build
+      - name: 🏗 Create Strapi database
+        # also, log the databases after creation
+        run: |
+          sudo apt-get install -y postgresql-client
+          psql -h localhost -U postgres -c 'CREATE DATABASE strapi;'
+          psql -h localhost -U postgres -c 'SELECT datname FROM pg_database;'
+        env:
+          PGPASSWORD: postgres
+      - name: 🎭 Playwright, I choose you!
+        run: |
+          npx playwright install --with-deps
+          npm run test:e2e
